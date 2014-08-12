@@ -13,7 +13,7 @@
 	"streamsUrlParams": "?flat",
 	"streamsUser": "admin",
 	"streamsPassword": "ke666ek",
-	"streamsStoragePath": "/home/denis/wowza-streams/",
+	"streamsStoragePath": "G:\Wowza\applications\first\content",
 	"defaultWowzaApp": "first"
     }
 }
