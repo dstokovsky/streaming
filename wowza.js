@@ -51,29 +51,57 @@ function _collectInactiveStreams(){
 function _updateStreams( streams ){
     async.parallel([
         function(){
-	    StreamModel.find({ status: true }).remove().exec();
             streams["active"].forEach(function(strm){
-                var stream = new StreamModel({
-                    name: strm["stream"],
-                    url: strm["url"],
-                    status: true
-                });
-                stream.save();
+		var existedStream = StreamModel.findOne({ name: strm["stream"] }, function(err, stream){
+                    if( err ){
+                        log.error('Internal error: %s', err.message);
+                        return;
+		    }
+                    if( !stream ){
+                        stream = new StreamModel({
+                            name: strm["stream"],
+                            url: strm["url"],
+                            status: true
+                        });
+                    }
+                    stream.status = true;
+                    stream.save(function( err ){
+			if( err ){
+			    log.error('Internal error: %s', err.message);
+			}
+		    });
+		});
             });
 	},
 	function(){
-	    StreamModel.find({ status: false }).remove().exec();
             streams["inactive"].forEach(function(strm){
                 var url = urlParser.parse( strm["url"] );
-                var stream = new StreamModel({
-                    name: url["path"].replace(".mp4", "").replace("/", ""),
-  	            url: strm["url"],
-	            status: false
-	        });
-                stream.save();
-    	    });
+                var streamName = url["path"].replace(".mp4", "").replace("/", "");
+	        StreamModel.findOne({ name: streamName }, function(err, stream){
+		    if( err ){
+                        log.error('Internal error: %s', err.message);
+                        return;
+                    }
+		    if( !stream ){
+                        stream = new StreamModel({
+                            name: streamName,
+                            url: strm["url"]
+                        });
+                    }
+		    stream.status = false;
+		    stream.save(function(err){
+			if( err ){
+  		            log.error('Internal error: %s', err.message);
+			}
+		    });
+       	        });
+	    });
 	}
-    ], function(err, results){});
+    ], function(err, results){
+        if( err ){
+            log.error('Internal error: %s', err.message);
+        }
+    });
 }
 
 function collectStreams(){
@@ -98,13 +126,12 @@ app.listen(config.get('port'), function(){
 
 app.get('/api/streams', function (req, res) {
     return StreamModel.find(function (err, streams) {
-        if (!err) {
-            return res.send( streams );
-        } else {
+        if ( err ) {
             res.statusCode = 500;
             log.error('Internal error(%d): %s',res.statusCode,err.message);
             return res.send({ error: 'Server error' });
         }
+        return res.send( streams );
     });
 });
 
