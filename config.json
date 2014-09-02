@@ -3,6 +3,7 @@
     "mongoose": {
         "uri": "mongodb://127.0.0.1:27017/wowza"
     },
+    "tokenSecret": "KCg15aq3Af~EmFjZQl8L@KECJuu@49",
     "wowza" : {
 	"protocol" : "http://",
         "streamingProtocol": "rtmp://",
