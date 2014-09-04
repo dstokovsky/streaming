@@ -32,6 +32,7 @@
     "express": "~4.7.2",
     "express-session": "~1.7.2",
     "favicon": "0.0.2",
+    "http-auth": "^2.1.9",
     "jwt-simple": "^0.2.0",
     "log": "~1.4.0",
     "logger": "0.0.1",

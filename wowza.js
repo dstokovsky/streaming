@@ -5,14 +5,12 @@ var config = require('./lib/config'),
     log = require('./lib/log')(module),
     app = express(),
     http = require('http'),
+    auth = require("http-auth"),
     xmlParser = require('xml2js'),
     urlParser = require('url'),
     fs = require('fs'),
     path = require('path'),
-    async = require('async'),
-    jwt = require('jwt-simple'),
-    jwtauth = require('./auth/jwtauth.js'),
-    bodyParser = require('body-parser');
+    async = require('async');
     
 var wowzaStreamingServer = config.get('wowza'),
     protocol = wowzaStreamingServer['protocol'],
@@ -28,6 +26,12 @@ var wowzaStreamingServer = config.get('wowza'),
         auth: [wowzaStreamingServer["streamsUser"], wowzaStreamingServer["streamsPassword"]].join(":")
     },
     storage = wowzaStreamingServer["streamsStoragePath"];
+
+var basic = auth.basic({
+    realm: "Private Area",
+    file: __dirname + "/.htpasswd",
+    contentType: "json"
+});
 
 function _collectActiveStreams( streamsXml ){
     var activeStreams = [];
@@ -122,7 +126,7 @@ function collectStreams(){
     });
 }
 
-app.all( '/api/*', [ jwtauth ] );
+app.use(auth.connect(basic));
 
 app.listen(config.get('port'), function(){
     console.log('Express server listening on port ' + config.get('port'));
@@ -130,7 +134,7 @@ app.listen(config.get('port'), function(){
 });
 
 app.get('/api/streams', function (req, res) {
-    return StreamModel.find({}, "url", function (err, streams) {
+    return StreamModel.find({}, "url name", function (err, streams) {
         if ( err ) {
             res.statusCode = 500;
             log.error('Internal error(%d): %s',res.statusCode,err.message);
