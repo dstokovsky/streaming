@@ -33,7 +33,7 @@ var basic = auth.basic({
     contentType: "json"
 });
 
-function _collectActiveStreams( streamsXml ){
+function collectActiveStreams( streamsXml ){
     var activeStreams = [];
     xmlParser.parseString( streamsXml, function(err, result){
         if( result["WowzaStreamingEngine"].hasOwnProperty( "Stream" ) && result["WowzaStreamingEngine"]["Stream"].length > 0 ){
@@ -46,7 +46,7 @@ function _collectActiveStreams( streamsXml ){
     return activeStreams;
 }
 
-function _collectInactiveStreams(){
+function collectInactiveStreams(){
     var inactiveStreams = [];
     fs.readdirSync(storage).forEach(function(file){
         inactiveStreams.push( { "url": [ protocol, serverHost, "/", path.basename( [storage, file].join("/") ) ].join("") } );
@@ -55,7 +55,7 @@ function _collectInactiveStreams(){
     return inactiveStreams;
 }
 
-function _updateStreams( streams ){
+function updateStreams( streams ){
     async.parallel([
         function(){
             streams["active"].forEach(function(strm){
@@ -68,10 +68,10 @@ function _updateStreams( streams ){
                         stream = new StreamModel({
                             name: strm["stream"],
                             url: strm["url"],
-                            status: true
+			    mime: "video" 
                         });
                     }
-                    stream.status = true;
+                    stream.online = 1;
                     stream.save(function( err ){
 			if( err ){
 			    log.error('Internal error: %s', err.message);
@@ -92,10 +92,11 @@ function _updateStreams( streams ){
 		    if( !stream ){
                         stream = new StreamModel({
                             name: streamName,
-                            url: strm["url"]
+                            url: strm["url"],
+			    mime: "video"
                         });
                     }
-		    stream.status = false;
+		    stream.online = 0;
 		    stream.save(function(err){
 			if( err ){
   		            log.error('Internal error: %s', err.message);
@@ -115,10 +116,10 @@ function collectStreams(){
     var streams = { "active": [], "inactive": [] };
     http.get(serverSettings, function(resp){
         resp.on('data', function (chunk) {
-            streams["active"] = _collectActiveStreams( chunk.toString() );
-            _updateStreams(streams);
+            streams["active"] = collectActiveStreams( chunk.toString() );
+            updateStreams(streams);
         });
-        streams["inactive"] = _collectInactiveStreams();
+        streams["inactive"] = collectInactiveStreams();
 
         resp.on('error', function (e) {
             console.log( e );
@@ -134,14 +135,18 @@ app.listen(config.get('port'), function(){
 });
 
 app.get('/api/streams', function (req, res) {
-    return StreamModel.find({}, "url name", function (err, streams) {
-        if ( err ) {
+    var filters = {};
+    if( req.query.filter.name && req.query.filter.value ){
+        filters[ req.query.filter.name ] = req.query.filter.value;
+    }
+    
+    return StreamModel.find(filters, "url name mime is_online", function(err, streams){
+        if( err ){
             res.statusCode = 500;
-            log.error('Internal error(%d): %s',res.statusCode,err.message);
-            return res.send({ error: 'Server error' });
+            log.error( "Internal error(%d): %s", res.statusCode, err.message );
+            return res.send( { error: 'Server error' } );
         }
-
-        return res.send( streams );
+        return res.send( streams )
     });
 });
 

@@ -37,6 +37,7 @@
     "log": "~1.4.0",
     "logger": "0.0.1",
     "method-override": "~2.1.2",
+    "mime": "^1.2.11",
     "mongoose": "~3.8.14",
     "morgan": "~1.2.2",
     "nconf": "~0.6.9",
